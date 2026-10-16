@@ -1,0 +1,106 @@
+From 555560604968cc45db4db75846ca877e0003803e Mon Sep 17 00:00:00 2001
+From: student <student@example.com>
+Date: Fri, 16 Oct 2026 04:36:48 +0000
+Subject: [PATCH 2/3] Fix Pylint findings: docstrings, snake_case, mutable
+ default, f-string, with-open, main guard
+
+---
+ hotel_booking_system.py | 35 ++++++++++++++++++++++++-----------
+ 1 file changed, 24 insertions(+), 11 deletions(-)
+
+diff --git a/hotel_booking_system.py b/hotel_booking_system.py
+index 1d2d0bd..1daee48 100644
+--- a/hotel_booking_system.py
++++ b/hotel_booking_system.py
+@@ -11,16 +11,26 @@ room_inventory = {
+     "103": {"type": "Standard", "price": 90.0, "is_booked": False},
+ }
+ 
++# Shared log of reservations, used when the caller does not pass its own.
++BOOKING_LOG = []
+ 
+-def bookRoom(room_num, guest_name, booking_log=[]):
++
++def book_room(room_num, guest_name, booking_log=None):
++    """Reserve a room for a guest.
++
++    Returns True on success, False if the room is unknown or already booked.
++    """
++    if booking_log is None:
++        booking_log = BOOKING_LOG
+     if room_num not in room_inventory or room_inventory[room_num]["is_booked"]:
+         return False
+     room_inventory[room_num]["is_booked"] = True
+-    booking_log.append("Reserved room %s for guest %s" % (room_num, guest_name))
++    booking_log.append(f"Reserved room {room_num} for guest {guest_name}")
+     return True
+ 
+ 
+ def cancel_booking(room_num):
++    """Release a room. Returns False if the room does not exist."""
+     if room_num not in room_inventory:
+         return False
+     room_inventory[room_num]["is_booked"] = False
+@@ -28,16 +38,15 @@ def cancel_booking(room_num):
+ 
+ 
+ def check_room_status(room_num):
++    """Return True if the room exists and is available."""
+     cleaning_deposit = 25.0
+     if room_inventory.get(room_num) == None:
+         return False
+-    if not room_inventory[room_num]["is_booked"]:
+-        return True
+-    else:
+-        return False
++    return not room_inventory[room_num]["is_booked"]
+ 
+ 
+ def compute_seasonal_rate(room_num, rate_multiplier):
++    """Return the room price multiplied by a positive seasonal multiplier."""
+     base_price = room_inventory[room_num]["price"]
+     multiplier = float(rate_multiplier)
+     if multiplier <= 0:
+@@ -46,23 +55,26 @@ def compute_seasonal_rate(room_num, rate_multiplier):
+ 
+ 
+ def generate_guest_hash(guest_id):
++    """Return a SHA-256 hex digest identifying a guest."""
+     return hashlib.sha256(guest_id.encode()).hexdigest()
+ 
+ 
+ def generate_booking_ref():
++    """Return a random four-digit booking reference."""
+     return secrets.randbelow(9000) + 1000
+ 
+ 
+ def export_room_ledger(filename="hotel_ledger.txt"):
+-    f = open(filename, "w")
+-    f.write(str(room_inventory))
+-    f.close()
++    """Write the room inventory to a text file."""
++    with open(filename, "w", encoding="utf-8") as ledger:
++        ledger.write(str(room_inventory))
+     print("Hotel ledger exported to:", filename)
+ 
+ 
+ def main():
++    """Run a short demo of the booking system."""
+     hotel_secret_key = os.environ.get("HOTEL_ADMIN_TOKEN")
+-    bookRoom("101", "Emma Watson")
++    book_room("101", "Emma Watson")
+     cancel_booking("102")
+     print("Is 103 available:", check_room_status("103"))
+     print("Surge price:", compute_seasonal_rate("101", 1.25))
+@@ -72,4 +84,5 @@ def main():
+     print("Admin token configured:", hotel_secret_key is not None)
+ 
+ 
+-main()
+\ No newline at end of file
++if __name__ == "__main__":
++    main()
+\ No newline at end of file
+-- 
+2.43.0
+
